@@ -211,7 +211,6 @@ namespace DnxMigrater.Migraters
                 projType = _projectTypes.ProjectTypeDictionary[model.ProjectTypeGuid];
             }
 
-
             _log.Debug("Migrating Project: [{2}] {0}  to {1}", projectFile, projectDir,projType);
 
             // now process .csproj file and populate the object
@@ -231,7 +230,6 @@ namespace DnxMigrater.Migraters
                 RootNamespace = model.RootNameSpace
             });
 
-
             // Write .xproj
             var destXProjFile = Path.Combine(destDir, string.Format(XprojFmt, projectFileNameWithoutExt));
             _log.Debug("Writing {0}...", destXProjFile);
@@ -246,8 +244,6 @@ namespace DnxMigrater.Migraters
                 // update guid
                 model.ProjectTypeGuid = _guidMapper.UpdateGuidToNewFormat(model.ProjectTypeGuid);
             }
-
-
 
             // write project.json
             if (!string.IsNullOrEmpty(projectJson))
@@ -265,46 +261,63 @@ namespace DnxMigrater.Migraters
                 File.WriteAllText(destAppSettingsFile, appSettingsJson);
             }
 
-
             if (includeFiles)
             {
-                _log.Debug("Copying all included files from " + projectDir);
-
-                // now copy all included files from project directory over to destination project directory
-                var includedFiles = model.IncludeFilesList;
-                var baseSrcPath = projectDir;
-                var destCopyPath = destDir;
-
-                var files = includedFiles.Where(x => !x.EndsWith("\\") && !x.Contains("*")).ToList();
-                var filesPattern = includedFiles.Except(files).Where(x => x.Contains("*"));
-                var folders = includedFiles.Except(files);
-
-
-                foreach (var pattern in filesPattern)
-                {
-                    var dir = Path.GetDirectoryName(Path.Combine(baseSrcPath, pattern));
-                    var f = Path.GetFileName(pattern.Replace(dir + "\\", ""));
-                    var filesInDir = Directory.GetFiles(dir, f).Select(x => x.Replace(baseSrcPath + "\\", ""));
-                    files.AddRange(filesInDir);
-                }
-
-
-                foreach (var file in files)
-                {
-                    var src = Path.Combine(baseSrcPath, file);
-                    var dest = Path.Combine(destCopyPath, file);
-                    var dir = Path.GetDirectoryName(dest);
-                    if (!Directory.Exists(dir))
-                        Directory.CreateDirectory(dir);
-
-                    File.Copy(src, dest, true);
-                    _log.Trace("copy {0} --> {1}", src, dest);
-                }
+                CopyIncludedProjectFiles(model, destDir, projectDir);
             }
 
 
             _log.Info("Migrated Project {0} Completed.", projectFileNameWithoutExt);
             return model;
+        }
+
+        /// <summary>
+        /// Copy files included in project to dest
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="destDir"></param>
+        /// <param name="projectDir"></param>
+        private void CopyIncludedProjectFiles(ProjectCsProjObj model, string destDir, string projectDir)
+        {
+            _log.Debug("Copying all included files from " + projectDir);
+
+            // now copy all included files from project directory over to destination project directory
+            var includedFiles = model.IncludeFilesList;
+            var baseSrcPath = projectDir;
+            var destCopyPath = destDir;
+
+            var files = includedFiles.Where(x => !x.EndsWith("\\") && !x.Contains("*")).ToList();
+            var filesPattern = includedFiles.Except(files).Where(x => x.Contains("*"));
+            var folders = includedFiles.Except(files);
+
+
+            foreach (var pattern in filesPattern)
+            {
+                var dir = Path.GetDirectoryName(Path.Combine(baseSrcPath, pattern));
+                var f = Path.GetFileName(pattern.Replace(dir + "\\", ""));
+                var filesInDir = Directory.GetFiles(dir, f).Select(x => x.Replace(baseSrcPath + "\\", ""));
+                files.AddRange(filesInDir);
+            }
+
+
+            foreach (var file in files)
+            {
+                var relativeFile = file;
+                if (relativeFile.EndsWith(".config"))
+                {
+                    // rename so its not picked up by project
+                    relativeFile = file.Replace(".config", ".config.orig");
+                }
+
+                var src = Path.Combine(baseSrcPath, file);
+                var dest = Path.Combine(destCopyPath, relativeFile);
+                var dir = Path.GetDirectoryName(dest);
+                if (!Directory.Exists(dir))
+                    Directory.CreateDirectory(dir);
+
+                File.Copy(src, dest, true);
+                _log.Trace("copy {0} --> {1}", src, dest);
+            }
         }
 
 
