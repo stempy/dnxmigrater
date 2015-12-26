@@ -1,0 +1,65 @@
+# GitIgnore ASPNET5 MVC 6 from https://gist.github.com/zbrad/1135e9d0bef2597f28df
+
+**/[Oo]bj/**
+**/[Bb]in/**
+**/TestResults/**
+**/.nuget/**
+**/*.sln.ide/**
+**/_ReSharper.*/**
+**/packages/**
+**/artifacts/**
+**/PublishProfiles/**
+**/.vs/**
+**/bower_components/**
+**/node_modules/**
+**/wwwroot/lib/**
+
+launchSettings.json
+debugSettings.json
+project.lock.json
+*.user
+*.suo
+*.cache
+*.docstates
+_ReSharper.*
+nuget.exe
+*net45.csproj
+*net451.csproj
+*k10.csproj
+*.psess
+*.vsp
+*.pidb
+*.userprefs
+*DS_Store
+*.ncrunchsolution
+*.*sdf
+*.ipch
+.settings
+*.sln.ide
+node_modules
+**/[Cc]ompiler/[Rr]esources/**/*.js
+*~
+# Visual Studio 2015 cache
+.vs/
+
+# GitIgnore ASPNET5 MVC 6 from https://gist.github.com/zbrad/1135e9d0bef2597f28df
+
+# SQL Server files
+App_Data/*.mdf
+App_Data/*.ldf
+App_Data/*.sdf
+
+
+# =========================
+# Windows detritus
+# =========================
+
+# Windows image file caches
+Thumbs.db
+ehthumbs.db
+
+# Folder config file
+Desktop.ini
+
+# Recycle Bin used on file shares
+$RECYCLE.BIN/

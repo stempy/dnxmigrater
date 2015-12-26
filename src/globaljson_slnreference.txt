@@ -1,0 +1,7 @@
+﻿Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{0ACC9772-A4A0-4B7D-B3E6-CC1D3D696F82}"
+	ProjectSection(SolutionItems) = preProject
+		global.json = global.json
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{F14B56FE-FF5C-4313-A1D2-1AAB3732B6B5}"
+EndProject
