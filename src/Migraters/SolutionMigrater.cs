@@ -4,8 +4,10 @@ using System.Linq;
 using DnxMigrater.Mapping;
 using DnxMigrater.Models.Dest;
 using DnxMigrater.Models.Source;
-using DnxMigrater.Other;
 using DnxMigrater.Solution;
+using NLog;
+using NLog.Targets;
+using ILogger = DnxMigrater.Other.ILogger;
 
 namespace DnxMigrater.Migraters
 {
@@ -40,11 +42,21 @@ namespace DnxMigrater.Migraters
             }
 
             var slnFileNameOnly = Path.GetFileName(solutionFile);
+            var tmpDir = destDir ?? Path.Combine(Path.GetTempPath(), "_dnxSolution\\" + slnFileNameOnly);
+
+            // --------------- NLOG specific code to set log file name ------------------------------------
+            // TODO: 26/12/2015 logger is abstracted yet using direct NLOG methods atm to set logfile path
+            var target = (FileTarget)LogManager.Configuration.FindTargetByName("f");
+            target.FileName = $"{tmpDir}/{slnFileNameOnly}_migration.log";
+            LogManager.ReconfigExistingLoggers();
+            // --------------- NLOG specific code to set log file name ------------------------------------
 
             _log.Info("Migrating solution file {0}",solutionFile);
-            var tmpDir = destDir ?? Path.Combine(Path.GetTempPath(), "_dnxSolution\\" + slnFileNameOnly);
-            var newSrcDir = Path.Combine(tmpDir, "src");
 
+
+
+
+            var newSrcDir = Path.Combine(tmpDir, "src");
             _log.Debug("Debug Dir {0}", tmpDir);
             _log.Debug("Analyzing Projects in solution...");
             var projectItems = _solutionParser.ParseProjectsInSolution(solutionFile);
