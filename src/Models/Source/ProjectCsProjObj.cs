@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using DnxMigrater.Models.Dest;
 
 namespace DnxMigrater.Models.Source
 {
@@ -37,6 +39,38 @@ namespace DnxMigrater.Models.Source
                 $"Project(\"{ProjectTypeGuid}\") = \"{ProjectName}\", \"{ProjectFileRelativePath}\", \"{ProjectGuid}\"\nEndProject\n";
         }
 
+        /// <summary>
+        /// Create projectjson object
+        /// </summary>
+        /// <returns></returns>
+        public ProjectJsonObj ToProjectJsonObj()
+        {
+            // all project references from .csproj
+            var projReferences = this.ProjectReferences;
+
+            // Get .NET framework references from .csproj (anything without hintpath) --> will go in frameworks/frameworkassemblies section
+            var netFrameworkReferences =
+                projReferences.Where(x => x.IsFrameworkAssembly && !x.IsNugetPackage && string.IsNullOrEmpty(x.HintPath));
+            var projectDependencies = projReferences.Where(x => !x.IsFrameworkAssembly);
+
+            // references (including net framework references)
+            var projectJson = new ProjectJsonObj();
+            projectJson.AddDependencies(projectDependencies);
+            projectJson.AddFramework("net46", netFrameworkReferences);
+            //projectJson.AddFramework("dnx461", netFrameworkReferences);
+
+            return projectJson;
+        }
+
+        public projectXProjModel ToProjectXProjObj()
+        {
+            return new projectXProjModel()
+            {
+                ProjectGuid = this.ProjectGuid,
+                RootNamespace = this.RootNameSpace
+            };
+        }
+
         public override string ToString()
         {
             return ToSlnProjectItemLine();
@@ -59,6 +93,12 @@ namespace DnxMigrater.Models.Source
                 RootNameSpace = this.RootNameSpace,
                 TargetFrameworkVersion = this.TargetFrameworkVersion
             };
+        }
+
+        public void SetProjectType(ProjectType projectType)
+        {
+            this.ProjectFilePath = this.ProjectFilePath.Replace(".csproj", ".xproj");
+            this.ProjectFileRelativePath = this.ProjectFileRelativePath?.Replace(".csproj", ".xproj") ?? "";
         }
     }
 

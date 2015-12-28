@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text;
 using System.Xml.Linq;
 using DnxMigrater.Models.Dest;
 using DnxMigrater.Other;
@@ -25,6 +26,16 @@ namespace DnxMigrater.Migraters
             var xDoc= XDocument.Parse(xProj);
 
             return xDoc.ToString();
+        }
+
+        /// <summary>
+        /// Write XProj file
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="filepath"></param>
+        public void WriteXProjFile(projectXProjModel model, string filepath)
+        {
+            File.WriteAllText(filepath, CreateXProjString(model), Encoding.UTF8);
         }
     }
 }
