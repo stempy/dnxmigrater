@@ -20,7 +20,8 @@ namespace DnxMigrater.Models.Source
             (!string.IsNullOrEmpty(HintPath)) &&  HintPath.ToLower().Contains("packages");
 
         public bool IsFrameworkAssembly => 
-            (string.IsNullOrEmpty(HintPath) && Name.StartsWith("System") || Name.StartsWith("Microsoft"));
+            ((string.IsNullOrEmpty(HintPath) && !Name.StartsWith("Microsoft.AspNet"))
+                && (Name.StartsWith("System") || Name.StartsWith("Microsoft")));
 
         public string ReferenceElement { get; set; }
     }
