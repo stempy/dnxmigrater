@@ -30,7 +30,7 @@ namespace DnxMigrater.Migraters
             _projectMigrater = projectMigrater;
             _solutionParser = new SolutionParser();
             _log = logger;
-            _guidMapper = new ProjectTypeGuidMapper();
+            _guidMapper = new ProjectTypeGuidMapper(_log);
         }
         #endregion
 

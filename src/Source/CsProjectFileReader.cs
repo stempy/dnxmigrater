@@ -22,37 +22,37 @@ namespace DnxMigrater.Source
         /// <param name="projectFile"></param>
         /// <param name="includeFiles">include csproj included files from project to copy to folder</param>
         /// <returns></returns>
-        public ProjectCsProjObj ParseCsProjectFile(string projectFile, bool includeFiles)
-        {
-            var projectDir = GetProjectDir(projectFile);
-            projectFile = GetProjectFilePath(projectFile);
-            var packagesConfigFile = Path.Combine(projectDir, "packages.config");
+        //public ProjectCsProjObj ParseCsProjectFile(string projectFile, bool includeFiles)
+        //{
+        //    var projectDir = GetProjectDir(projectFile);
+        //    projectFile = GetProjectFilePath(projectFile);
+        //    var packagesConfigFile = Path.Combine(projectDir, "packages.config");
 
-            var file = File.ReadAllText(projectFile);
-            XDocument doc = XDocument.Parse(file);
-            var o = new ProjectCsProjObj();
-            o.ProjectFilePath = projectFile;
-            InitObj(o, doc);
-            var references = new List<ProjectReference>();
+        //    var file = File.ReadAllText(projectFile);
+        //    XDocument doc = XDocument.Parse(file);
+        //    var o = new ProjectCsProjObj();
+        //    o.ProjectFilePath = projectFile;
+        //    InitObj(o, doc);
+        //    var references = new List<ProjectReference>();
 
-            if (!string.IsNullOrEmpty(packagesConfigFile) && File.Exists(packagesConfigFile))
-            {
-                var nugetRefs = GetPackageConfigReferences(packagesConfigFile);
-                references.AddRange(nugetRefs);
-            }
+        //    if (!string.IsNullOrEmpty(packagesConfigFile) && File.Exists(packagesConfigFile))
+        //    {
+        //        var nugetRefs = GetPackageConfigReferences(packagesConfigFile);
+        //        references.AddRange(nugetRefs);
+        //    }
 
-            var projectRefs = GetProjectReferences(doc, projectFile).Where(x => !x.IsNugetPackage);
-            references.AddRange(projectRefs);
-            o.ProjectReferences = references;
+        //    var projectRefs = GetProjectReferences(doc, projectFile).Where(x => !x.IsNugetPackage);
+        //    references.AddRange(projectRefs);
+        //    o.ProjectReferences = references;
 
-            if (includeFiles)
-            {
-                o.IncludeFilesList = GetProjectIncludedFiles(doc);
-            }
+        //    if (includeFiles)
+        //    {
+        //        o.IncludeFilesList = GetProjectIncludedFiles(doc);
+        //    }
 
 
-            return o;
-        }
+        //    return o;
+        //}
 
         /// <summary>
         /// Parse csproj file
@@ -69,7 +69,7 @@ namespace DnxMigrater.Source
             XDocument doc = XDocument.Parse(file);
 
             var o = (ProjectCsProjObj)model.Clone();
-            InitObj(o, doc);
+            o= InitObj(o, doc);
             var references = new List<ProjectReference>();
 
             if (!string.IsNullOrEmpty(packagesConfigFile) && File.Exists(packagesConfigFile))
@@ -130,10 +130,9 @@ namespace DnxMigrater.Source
         #endregion
 
         #region [Project file basics]
-        public void InitObj(ProjectCsProjObj obj, XDocument doc)
+        public ProjectCsProjObj InitObj(ProjectCsProjObj obj, XDocument doc)
         {
             obj.ProjectGuid = Guid.Parse(doc.Descendants(csProjxmlns + "ProjectGuid").FirstOrDefault().Value);
-
             var projectTypeGuids = doc.Descendants(csProjxmlns + "ProjectTypeGuids").FirstOrDefault()?.Value;
             if (projectTypeGuids != null)
             {
@@ -141,8 +140,8 @@ namespace DnxMigrater.Source
                 var pGuids = projectTypeGuids.Split(';');
                 if (pGuids.Length > 1)
                 {
-                    obj.ProjectTypeGuid = Guid.Parse(pGuids[1]);
-                    obj.ProjectTypeGuid2 = Guid.Parse(pGuids[0]);
+                    obj.ProjectTypeGuid = Guid.Parse(pGuids[0]); // likely MVC type
+                    obj.ProjectTypeGuid2 = Guid.Parse(pGuids[1]); // likely C# {fae04ec0-301f-11d3-bf4b-00c04f79efbc}
                 }
             }
 
@@ -151,6 +150,8 @@ namespace DnxMigrater.Source
             obj.AssemblyName = doc.Descendants(csProjxmlns + "AssemblyName").FirstOrDefault().Value;
             obj.TargetFrameworkVersion = doc.Descendants(csProjxmlns + "TargetFrameworkVersion").FirstOrDefault().Value;
             obj.OutputType = doc.Descendants(csProjxmlns + "OutputType").FirstOrDefault().Value;
+
+            return obj;
         }
         #endregion
 

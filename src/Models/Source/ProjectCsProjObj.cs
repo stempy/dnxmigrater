@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using DnxMigrater.Mapping;
 using DnxMigrater.Models.Dest;
 
 namespace DnxMigrater.Models.Source
@@ -19,6 +20,9 @@ namespace DnxMigrater.Models.Source
 
         public IEnumerable<ProjectReference> ProjectReferences { get; set; }
         public Guid ProjectTypeGuid { get; set; }
+
+        public string ProjectTypeDesc => 
+                            ProjectTypesMapper.GetProjectTypeDescription(ProjectTypeGuid);
 
         /// <summary>
         /// Websites have 2 project types

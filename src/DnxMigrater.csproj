@@ -61,6 +61,8 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Compile Include="Mapping\ProjectTypeGuidMapper.cs" />
+    <Compile Include="Mapping\ProjectTypesMapper.cs" />
+    <Compile Include="Migraters\MvcProjectFileMigrater.cs" />
     <Compile Include="Models\Dest\GlobalJsonObj.cs" />
     <Compile Include="Solution\ISolutionParser.cs" />
     <Compile Include="Solution\ISolutionWriter.cs" />

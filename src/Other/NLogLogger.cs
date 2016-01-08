@@ -33,6 +33,11 @@ namespace DnxMigrater.Other
             _log.Info(message, args);
         }
 
+        public void Warn(string message, params object[] args)
+        {
+            _log.Warn(message,args);
+        }
+
         public void Error(string message, params object[] args)
         {
             _log.Error(message, args);

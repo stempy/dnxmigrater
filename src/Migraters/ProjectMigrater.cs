@@ -2,9 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using DnxMigrater.Mapping;
-using DnxMigrater.Models.Dest;
 using DnxMigrater.Models.Source;
 using DnxMigrater.Other;
 using DnxMigrater.Source;
@@ -25,15 +23,13 @@ namespace DnxMigrater.Migraters
         private readonly ILogger _log;
         private readonly ITemplateRenderer _templateRenderer;
         private readonly ICsProjectFileReader _projectFileReader;
+        private readonly IMvcProjectFileMigrater _mvcProjectFileMigrater;
 
         private XProjWriter _xProjWriter;
         private readonly ProjectTypeGuidMapper _guidMapper;
-        private ProjectTypes _projectTypes;
-
         #endregion
 
         #region [Ctors]
-
         public ProjectMigrater(ICsProjectFileReader projectFileReader,
             IAppConfigToJsonAppSettingsMigrater appConfigMigrater,
             ITemplateRenderer templateRenderer,
@@ -44,11 +40,9 @@ namespace DnxMigrater.Migraters
             _templateRenderer = templateRenderer;
             _projectFileReader = projectFileReader;
             _xProjWriter = new XProjWriter(_templateRenderer);
-            _guidMapper = new ProjectTypeGuidMapper();
-            _projectTypes = new ProjectTypes();
+            _guidMapper = new ProjectTypeGuidMapper(_log);
+            _mvcProjectFileMigrater = new MvcProjectFileMigrater(_log);
         }
-
-
         #endregion
 
         #region [Migrate Interface]
@@ -74,71 +68,59 @@ namespace DnxMigrater.Migraters
         /// <param name="destDir"></param>
         public ProjectCsProjObj MigrateProject(ProjectCsProjObj model, bool includeFiles = false, string destDir = null)
         {
-            var projectFile = model.ProjectFilePath;
-
-            projectFile = GetProjectFilePath(projectFile);
+            var projectFile = GetProjectFilePath(model.ProjectFilePath);
+            var projectFileNameWithoutExt = Path.GetFileNameWithoutExtension(model.ProjectFilePath);
             var projectDir = Path.GetDirectoryName(projectFile);
-            var projectFilename = Path.GetFileNameWithoutExtension(projectFile);
-            destDir = destDir ?? Path.Combine(Path.GetTempPath() + @"\_dnx", projectFilename ?? "project");
-
-            if (!Directory.Exists(destDir))
-                Directory.CreateDirectory(destDir);
-
-            string projType = "";
-
-            if (model.ProjectTypeGuid != Guid.Empty)
-            {
-                projType = _projectTypes.ProjectTypeDictionary[model.ProjectTypeGuid];
-            }
-
-            _log.Debug("Migrating Project: [{2}] {0}  to {1}", projectFile, projectDir, projType);
+            destDir = destDir ?? Path.Combine(Path.GetTempPath() + @"\_dnx", projectFileNameWithoutExt ?? "project");
 
             // now process .csproj file and populate the object
             model = _projectFileReader.ParseCsProjectFile(model, includeFiles);
+            var projDetails =
+                $" --- Project: {model.ProjectName} Type:{model.ProjectTypeDesc} Framework:{model.TargetFrameworkVersion} ---";
 
-            var projectFileNameWithoutExt = Path.GetFileNameWithoutExtension(model.ProjectFilePath);
+            _log.Info(projDetails);
+            _log.Debug("Source: {0} -->  {1}", projectFile, projectDir);
 
-            // Create project.json object and appsettingsjson
-            var projectJson = model.ToProjectJsonObj().ToString();
-            var appSettingsJson = _appConfigMigrater.MigrateConfigToJsonAppSettings(projectDir);
+            // where to output new project based files
+            if (!Directory.Exists(destDir))
+                Directory.CreateDirectory(destDir);
 
-            // Write .xproj
+            // 1.Write .xproj
             var destXProjFile = Path.Combine(destDir, string.Format(XprojFmt, projectFileNameWithoutExt));
-            _log.Debug("Writing {0}...", destXProjFile);
-            _xProjWriter.WriteXProjFile(model.ToProjectXProjObj(),destXProjFile);
-
-            // update project type to xproj
+            _log.Debug("\tWriting {0}...", Path.GetFileName(destXProjFile));
+            _xProjWriter.WriteXProjFile(model.ToProjectXProjObj(), destXProjFile);
             model.SetProjectType(ProjectType.xproj);
-
             if (model.ProjectTypeGuid != Guid.Empty)
             {
-                // update guid
+                // update guid in object
                 model.ProjectTypeGuid = _guidMapper.UpdateGuidToNewFormat(model.ProjectTypeGuid);
             }
 
-            // write project.json
+            // 2.Create project.json object
+            var projectJson = model.ToProjectJsonObj().ToString();
+            var destprojectJsonFile = Path.Combine(destDir, ProjectJsonFile);
             if (!string.IsNullOrEmpty(projectJson))
             {
-                var destprojectJsonFile = Path.Combine(destDir, ProjectJsonFile);
-                _log.Debug("Writing {0}...", destprojectJsonFile);
+                _log.Debug("\tWriting {0}...", Path.GetFileName(destprojectJsonFile));
                 File.WriteAllText(destprojectJsonFile, projectJson);
             }
 
-            // write appsettings.json if there was an app.config or web.config
+            // 3. Create app.settings JSON string from app.config/web.config
+            var appSettingsJson = _appConfigMigrater.MigrateConfigToJsonAppSettings(projectDir);
             if (!string.IsNullOrEmpty(appSettingsJson))
             {
                 var destAppSettingsFile = Path.Combine(destDir, AppSettingsJsonFile);
-                _log.Debug("Migrating {0} to {1}", projectDir, destAppSettingsFile);
+                _log.Debug("\tMigrating {0} to {1}", projectDir, Path.GetFileName(destAppSettingsFile));
                 File.WriteAllText(destAppSettingsFile, appSettingsJson);
             }
 
+            // copy ALL csproj included files to destination
             if (includeFiles)
             {
-                CopyIncludedProjectFiles(model, destDir, projectDir);
+                CopyIncludedProjectFiles(model, destDir, projectDir, destprojectJsonFile);
             }
 
-
-            _log.Info("Migrated Project {0} Completed.", projectFileNameWithoutExt);
+            _log.Info(" --- Project: {0} Completed to \"{1}\" ---", projectFileNameWithoutExt, destDir);
             return model;
         }
 
@@ -149,23 +131,20 @@ namespace DnxMigrater.Migraters
         /// </summary>
         /// <param name="model"></param>
         /// <param name="destDir"></param>
-        /// <param name="projectDir"></param>
-        private void CopyIncludedProjectFiles(ProjectCsProjObj model, string destDir, string projectDir)
+        /// <param name="projectSrcDir"></param>
+        /// <param name="destProjectJson"></param>
+        private void CopyIncludedProjectFiles(ProjectCsProjObj model, string destDir, string projectSrcDir, string destProjectJson)
         {
-            _log.Debug("Copying all included files from " + projectDir);
+            _log.Debug("Copying all included files from " + projectSrcDir);
 
             // now copy all included files from project directory over to destination project directory
             var includedFiles = model.IncludeFilesList;
-            var baseSrcPath = projectDir;
+            var baseSrcPath = projectSrcDir;
             var destCopyPath = destDir;
-            var destProjectJson = Path.Combine(destCopyPath, ProjectJsonFile);
-
-
-
             var files = includedFiles.Where(x => !x.EndsWith("\\") && !x.Contains("*")).ToList();
             var filesPattern = includedFiles.Except(files).Where(x => x.Contains("*"));
             var folders = includedFiles.Except(files);
-
+            var isMvcBasedProject = model.ProjectTypeDesc.Contains("MVC");
 
             foreach (var pattern in filesPattern)
             {
@@ -175,7 +154,11 @@ namespace DnxMigrater.Migraters
                 files.AddRange(filesInDir);
             }
 
-            bool IsMvcBasedProject = false;
+            // TODO: to implement soon
+            //if (isMvcBasedProject)
+            //{
+            //    _mvcProjectFileMigrater.CopyMvcFiles(model,  baseSrcPath, destProjectJson, files, destCopyPath);
+            //}
 
             // remove help page (api specific)
             files.RemoveAll(m => m.Contains("Areas\\Help"));
@@ -201,13 +184,10 @@ namespace DnxMigrater.Migraters
                     {
                         relativeFile.Replace("Global.asax", "Global.asax.orig");
                     }
-                    
                 }
-
 
                 if (file.EndsWith("HelpController.cs"))
                     continue;
-
 
                 var src = Path.Combine(baseSrcPath, file);
                 var dest = Path.Combine(destCopyPath, relativeFile);
@@ -218,10 +198,9 @@ namespace DnxMigrater.Migraters
                 if (src.EndsWith("Controller.cs"))
                 {
                     _log.Trace("processing controller {0} --> {1}", src, dest);
-                    var csTxt = UpdateMvcControllerFile(src);
+                    var csTxt = _mvcProjectFileMigrater.UpdateMvcControllerFile(src);
                     File.WriteAllText(dest, csTxt);
                     _log.Trace("controller updated {0} --> {1}", src, dest);
-                    IsMvcBasedProject = true;
                 }
                 else
                 {
@@ -229,68 +208,9 @@ namespace DnxMigrater.Migraters
                     _log.Trace("copy {0} --> {1}", src, dest);
                 }
             }
-
-            if (IsMvcBasedProject)
-            {
-                // TODO
-                //make sure dest project.json has mvc dependency
-                if (!model.ToProjectJsonObj().Dependencies.Any(x => x.Key.Contains("Microsoft.AspNet.Mvc")))
-                {
-                    // not in dependencies list, so lets add it
-                    ((List<ProjectReference>) model.ProjectReferences).Add(new ProjectReference()
-                    {
-                        HintPath = "packages",
-                        Source = "Controller",
-                        Name = "Microsoft.AspNet.Mvc"
-                    });
-
-                    var destProjectJsonTxt = model.ToProjectJsonObj().ToString();
-                    var destprojectJsonFile = Path.Combine(destDir, ProjectJsonFile);
-                    File.WriteAllText(destprojectJsonFile,destProjectJsonTxt);
-                }
-
-               
-                //if (!destProjectJsonTxt.Contains("Micro"))
-            }
         }
 
-        private string UpdateMvcControllerFile(string src)
-        {
-            // mvc controller file -- process in memory and save directly to path
-            bool isApiFile = src.EndsWith("ApiController.cs");
-            var csTxt = File.ReadAllText(src);
-            // see: http://aspnetmvc.readthedocs.org/projects/mvc/en/latest/migration/migratingfromwebapi2.html
-
-            //ApiController does not exist
-            //System.Web.Http namespace does not exist
-            //IHttpActionResult does not exist
-            //NotFound does not exist
-            //Ok does not exist
-            //Fortunately, these are all very easy to correct:
-
-            //Change ApiController to Controller(you may need to add using Microsoft.AspNet.Mvc)
-            //Delete any using statement referring to System.Web.Http
-            //Change any method returning IHttpActionResult to return a IActionResult
-            //Change NotFound to HttpNotFound
-            //Change Ok(product) to new ObjectResult(product)
-
-            csTxt = csTxt.Replace(": ApiController", ": Controller");
-            if (!csTxt.Contains("Microsoft.AspNet.Mvc"))
-            {
-                csTxt = "using Microsoft.AspNet.Mvc;\r\n" + csTxt;
-            }
-
-            if (csTxt.Contains("using System.Web.Http"))
-                csTxt = csTxt.Replace("using System.Web.Http", "// dnxMigrater REMOVED - using System.Web.Http");
-
-            csTxt = csTxt.Replace("IHttpActionResult", "IActionResult")
-                         .Replace("NotFound","HttpNotFound")
-                         .Replace("Ok(","new ObjectResult(")
-                         .Replace("RoutePrefix","Route");
-            
-
-            return csTxt;
-        }
+   
 
 
         private string GetProjectFilePath(string projectPath)
