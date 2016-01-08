@@ -191,6 +191,20 @@ namespace DnxMigrater.Migraters
                     relativeFile = file.Replace(".config", ".config.orig");
                 }
 
+                if (relativeFile.Contains("Global.asax"))
+                {
+                    if (relativeFile.EndsWith(".cs"))
+                    {
+                        relativeFile = relativeFile.Replace(".cs", ".cs.orig");
+                    }
+                    else
+                    {
+                        relativeFile.Replace("Global.asax", "Global.asax.orig");
+                    }
+                    
+                }
+
+
                 if (file.EndsWith("HelpController.cs"))
                     continue;
 
