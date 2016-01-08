@@ -144,7 +144,7 @@ namespace DnxMigrater.Migraters
             var files = includedFiles.Where(x => !x.EndsWith("\\") && !x.Contains("*")).ToList();
             var filesPattern = includedFiles.Except(files).Where(x => x.Contains("*"));
             var folders = includedFiles.Except(files);
-            var isMvcBasedProject = model.ProjectTypeDesc.Contains("MVC");
+            var isMvcBasedProject = model.ProjectTypeDesc !=null && model.ProjectTypeDesc.Contains("MVC");
 
             foreach (var pattern in filesPattern)
             {
@@ -154,14 +154,12 @@ namespace DnxMigrater.Migraters
                 files.AddRange(filesInDir);
             }
 
-            // TODO: to implement soon
-            //if (isMvcBasedProject)
-            //{
-            //    _mvcProjectFileMigrater.CopyMvcFiles(model,  baseSrcPath, destProjectJson, files, destCopyPath);
-            //}
-
-            // remove help page (api specific)
-            files.RemoveAll(m => m.Contains("Areas\\Help"));
+            if (isMvcBasedProject)
+            {
+                // process mvc based projects, many more changes to implement
+                _mvcProjectFileMigrater.CopyMvcFiles(model, baseSrcPath, destProjectJson, files, destCopyPath);
+                return;
+            } 
 
             foreach (var file in files)
             {
@@ -186,27 +184,14 @@ namespace DnxMigrater.Migraters
                     }
                 }
 
-                if (file.EndsWith("HelpController.cs"))
-                    continue;
-
                 var src = Path.Combine(baseSrcPath, file);
                 var dest = Path.Combine(destCopyPath, relativeFile);
                 var dir = Path.GetDirectoryName(dest);
                 if (!Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
 
-                if (src.EndsWith("Controller.cs"))
-                {
-                    _log.Trace("processing controller {0} --> {1}", src, dest);
-                    var csTxt = _mvcProjectFileMigrater.UpdateMvcControllerFile(src);
-                    File.WriteAllText(dest, csTxt);
-                    _log.Trace("controller updated {0} --> {1}", src, dest);
-                }
-                else
-                {
-                    File.Copy(src, dest, true);
-                    _log.Trace("copy {0} --> {1}", src, dest);
-                }
+                File.Copy(src, dest, true);
+                _log.Trace("copy {0} --> {1}", src, dest);
             }
         }
 
