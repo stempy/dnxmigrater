@@ -62,6 +62,7 @@
     </Content>
     <Compile Include="Mapping\ProjectTypeGuidMapper.cs" />
     <Compile Include="Mapping\ProjectTypesMapper.cs" />
+    <Compile Include="Migraters\IMvcProjectFileMigrater.cs" />
     <Compile Include="Migraters\MvcProjectFileMigrater.cs" />
     <Compile Include="Models\Dest\GlobalJsonObj.cs" />
     <Compile Include="Solution\ISolutionParser.cs" />
