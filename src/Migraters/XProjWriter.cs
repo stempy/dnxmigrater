@@ -25,7 +25,7 @@ namespace DnxMigrater.Migraters
 
             var xDoc= XDocument.Parse(xProj);
 
-            return xDoc.ToString();
+            return "<?xml version=\"1.0\" encoding=\"utf-8\" ?>\r\n" +  xDoc.ToString();
         }
 
         /// <summary>

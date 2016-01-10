@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,11 +9,14 @@ namespace DnxMigrater.Migraters
 {
     public class MvcProjectFileMigrater : IMvcProjectFileMigrater
     {
-        private ILogger _log;
+        private readonly ILogger _log;
+        private readonly IEnumerable<IFileCopyProcessor> _copyProcessors; 
+
 
         public MvcProjectFileMigrater(ILogger logger)
         {
             _log = logger;
+            _copyProcessors = new IFileCopyProcessor[] {new MvcFileControllerProcessor(_log),new MvcFileRazorViewProcessor(_log) };
         }
 
         public void CopyMvcFiles(ProjectCsProjObj model, string baseSrcPath, string destProjectJson, IEnumerable<string> filesToCopy, string destCopyPath)
@@ -41,12 +45,10 @@ namespace DnxMigrater.Migraters
                 if (!Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
 
-                if (src.EndsWith("Controller.cs"))
+                var processor = _copyProcessors.FirstOrDefault(m => m.CanProcessFile(src));
+                if (processor != null)
                 {
-                    _log.Trace("\tprocessing controller {0} --> {1}", src, dest);
-                    var csTxt = UpdateMvcControllerFile(src);
-                    File.WriteAllText(dest, csTxt);
-                    _log.Trace("\tcontroller updated {0} --> {1}", src, dest);
+                    processor.ProcessFile(src, dest);
                 }
                 else
                 {
@@ -54,6 +56,20 @@ namespace DnxMigrater.Migraters
                     File.Copy(src, dest, true);
                     _log.Trace("\t\tcopied {0} --> {1}", src, dest);
                 }
+
+                //if (src.EndsWith("Controller.cs"))
+                //{
+                //    _log.Trace("\tprocessing controller {0} --> {1}", src, dest);
+                //    var csTxt = UpdateMvcControllerFile(src);
+                //    File.WriteAllText(dest, csTxt);
+                //    _log.Trace("\tcontroller updated {0} --> {1}", src, dest);
+                //}
+                //else
+                //{
+                //    // standard copy
+                //    File.Copy(src, dest, true);
+                //    _log.Trace("\t\tcopied {0} --> {1}", src, dest);
+                //}
             }
 
             // TODO
@@ -73,43 +89,6 @@ namespace DnxMigrater.Migraters
             }
         }
 
-        private string UpdateMvcControllerFile(string src)
-        {
-            // mvc controller file -- process in memory and save directly to path
-            bool isApiFile = src.EndsWith("ApiController.cs");
-            var csTxt = File.ReadAllText(src);
-            // see: http://aspnetmvc.readthedocs.org/projects/mvc/en/latest/migration/migratingfromwebapi2.html
-
-            //ApiController does not exist
-            //System.Web.Http namespace does not exist
-            //IHttpActionResult does not exist
-            //NotFound does not exist
-            //Ok does not exist
-            //Fortunately, these are all very easy to correct:
-
-            //Change ApiController to Controller(you may need to add using Microsoft.AspNet.Mvc)
-            //Delete any using statement referring to System.Web.Http
-            //Change any method returning IHttpActionResult to return a IActionResult
-            //Change NotFound to HttpNotFound
-            //Change Ok(product) to new ObjectResult(product)
-
-            csTxt = csTxt.Replace(": ApiController", ": Controller");
-            if (!csTxt.Contains("Microsoft.AspNet.Mvc"))
-            {
-                csTxt = "using Microsoft.AspNet.Mvc;\r\n" + csTxt;
-            }
-
-            if (csTxt.Contains("using System.Web.Http"))
-                csTxt = csTxt.Replace("using System.Web.Http", "// dnxMigrater REMOVED - using System.Web.Http");
-
-            csTxt = csTxt.Replace("IHttpActionResult", "IActionResult")
-                .Replace("NotFound", "HttpNotFound")
-                .Replace("Ok(", "new ObjectResult(")
-                .Replace("RoutePrefix", "Route");
-
-
-            return csTxt;
-        }
 
         /// <summary>
         /// Get new relative filename that will be appended to base dest dir path
@@ -126,10 +105,30 @@ namespace DnxMigrater.Migraters
                 return null;
 
 
+            if (relativeFile.Contains("Content\\"))
+            {
+                // web asset
+                relativeFile = relativeFile.Replace("Content\\", "wwwroot\\");
+            }
+
+            if (relativeFile.Contains("Scripts\\"))
+            {
+                // web asset
+                relativeFile = relativeFile.Replace("Scripts\\", "wwwroot\\js\\");
+            }
+
+
+            if (relativeFile.Contains("fonts\\"))
+            {
+                // web asset
+                relativeFile = relativeFile.Replace("fonts\\", "wwwroot\\fonts\\");
+            }
+
+
             if (relativeFile.EndsWith(".config"))
             {
                 // rename so its not picked up by project
-                relativeFile = file.Replace(".config", ".config.orig");
+                relativeFile = relativeFile.Replace(".config", ".config.orig");
             }
 
             if (relativeFile.Contains("Global.asax"))

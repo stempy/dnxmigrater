@@ -62,6 +62,10 @@
     </Content>
     <Compile Include="Mapping\ProjectTypeGuidMapper.cs" />
     <Compile Include="Mapping\ProjectTypesMapper.cs" />
+    <Compile Include="Migraters\MvcFileControllerProcessor.cs" />
+    <Compile Include="Migraters\FileProcessorBase.cs" />
+    <Compile Include="Migraters\MvcFileRazorViewProcessor.cs" />
+    <Compile Include="Migraters\IFileCopyProcessor.cs" />
     <Compile Include="Migraters\IMvcProjectFileMigrater.cs" />
     <Compile Include="Migraters\MvcProjectFileMigrater.cs" />
     <Compile Include="Models\Dest\GlobalJsonObj.cs" />
