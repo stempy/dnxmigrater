@@ -1,6 +1,8 @@
+using System;
+
 namespace DnxMigrater.Models.Source
 {
-    public class ProjectReference
+    public class ProjectReference : ICloneable
     {
         //public string Name
         //{
@@ -24,5 +26,21 @@ namespace DnxMigrater.Models.Source
                 && (Name.StartsWith("System") || Name.StartsWith("Microsoft")));
 
         public string ReferenceElement { get; set; }
+
+
+        public object Clone()
+        {
+            return new ProjectReference()
+            {
+                Version = this.Version,
+                HintPath = this.HintPath,
+                Include = this.Include,
+                IsPrivate = this.IsPrivate,
+                IsSpecificVersion = this.IsSpecificVersion,
+                Name = this.Name,
+                ReferenceElement = this.ReferenceElement,
+                Source = this.Source                
+            };
+        }
     }
 }

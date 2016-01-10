@@ -18,7 +18,7 @@ namespace DnxMigrater.Models.Source
         public string TargetFrameworkVersion { get; set; }
         public string FileAlignment { get; set; }
 
-        public IEnumerable<ProjectReference> ProjectReferences { get; set; }
+        public ICollection<ProjectReference> ProjectReferences { get; set; }
         public Guid ProjectTypeGuid { get; set; }
 
         public string ProjectTypeDesc => 

@@ -6,6 +6,9 @@ namespace DnxMigrater.Models.Dest
     public class StringObjectDictionay : Dictionary<string, object>
     {}
 
+    public class StringKeyDic : Dictionary<string, string> { }
+
+
     public class ProjectDependencies : Dictionary<string, object>
     {
         public void AddDependencies(IEnumerable<ProjectReference> packagesList)

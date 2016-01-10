@@ -16,6 +16,10 @@ namespace DnxMigrater.Models.Dest
         [JsonProperty(PropertyName = "frameworks")]
         public ProjectFrameworks Frameworks { get; set; }
 
+        [JsonProperty(PropertyName = "commands")]
+        public IDictionary<string,string> Commands { get; set; }
+
+
         public ProjectJsonObj()
         {
             if (Dependencies == null) Dependencies = new ProjectDependencies();

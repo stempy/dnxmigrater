@@ -47,6 +47,12 @@ namespace DnxMigrater.Migraters
             //Change Ok(product) to new ObjectResult(product)
 
             csTxt = csTxt.Replace(": ApiController", ": Controller");
+
+            if (csTxt.Contains("using System.Web.Mvc"))
+            {
+                csTxt = csTxt.Replace("using System.Web.Mvc", "using Microsoft.AspNet.Mvc");
+            }
+
             if (!csTxt.Contains("Microsoft.AspNet.Mvc"))
             {
                 csTxt = "using Microsoft.AspNet.Mvc;\r\n" + csTxt;
@@ -55,13 +61,10 @@ namespace DnxMigrater.Migraters
             if (csTxt.Contains("using System.Web.Http"))
                 csTxt = csTxt.Replace("using System.Web.Http", "// dnxMigrater REMOVED - using System.Web.Http");
 
-            if (csTxt.Contains("using System.Web.Mvc"))
-            {
-                csTxt = csTxt.Replace("using System.Web.Mvc", "using Microsoft.AspNet.Mvc");
-            }
+       
 
             csTxt = csTxt.Replace("IHttpActionResult", "IActionResult")
-                .Replace("NotFound", "HttpNotFound")
+                .Replace(" NotFound", " HttpNotFound")
                 .Replace("Ok(", "new ObjectResult(")
                 .Replace("RoutePrefix", "Route").Replace(" ActionResult "," IActionResult ");
 

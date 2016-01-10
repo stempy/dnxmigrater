@@ -10,13 +10,13 @@ namespace DnxMigrater.Migraters
     public class MvcProjectFileMigrater : IMvcProjectFileMigrater
     {
         private readonly ILogger _log;
-        private readonly IEnumerable<IFileCopyProcessor> _copyProcessors; 
+        private readonly IEnumerable<IFileCopyProcessor> _copyProcessors;
 
 
         public MvcProjectFileMigrater(ILogger logger)
         {
             _log = logger;
-            _copyProcessors = new IFileCopyProcessor[] {new MvcFileControllerProcessor(_log),new MvcFileRazorViewProcessor(_log) };
+            _copyProcessors = new IFileCopyProcessor[] { new MvcFileControllerProcessor(_log), new MvcFileRazorViewProcessor(_log) };
         }
 
         public void CopyMvcFiles(ProjectCsProjObj model, string baseSrcPath, string destProjectJson, IEnumerable<string> filesToCopy, string destCopyPath)
@@ -33,10 +33,10 @@ namespace DnxMigrater.Migraters
                 // skip null new files
                 if (string.IsNullOrEmpty(relativeFile))
                 {
-                    _log.Trace("\tSkipping file {0}",file);
+                    _log.Trace("\tSkipping file {0}", file);
                     continue;
                 }
-                    
+
 
                 // get src and dest paths of file
                 var src = Path.Combine(baseSrcPath, file);
@@ -56,37 +56,42 @@ namespace DnxMigrater.Migraters
                     File.Copy(src, dest, true);
                     _log.Trace("\t\tcopied {0} --> {1}", src, dest);
                 }
-
-                //if (src.EndsWith("Controller.cs"))
-                //{
-                //    _log.Trace("\tprocessing controller {0} --> {1}", src, dest);
-                //    var csTxt = UpdateMvcControllerFile(src);
-                //    File.WriteAllText(dest, csTxt);
-                //    _log.Trace("\tcontroller updated {0} --> {1}", src, dest);
-                //}
-                //else
-                //{
-                //    // standard copy
-                //    File.Copy(src, dest, true);
-                //    _log.Trace("\t\tcopied {0} --> {1}", src, dest);
-                //}
             }
 
-            // TODO
-            //make sure dest project.json has mvc dependency
-            if (!model.ToProjectJsonObj().Dependencies.Any(x => x.Key.Contains("Microsoft.AspNet.Mvc")))
+
+            UpdateProjectJsonForMvc(model, destProjectJson);
+        }
+
+        private static void UpdateProjectJsonForMvc(ProjectCsProjObj model, string destProjectJson)
+        {
+            var refList = model.ProjectReferences.ToList();
+            refList.RemoveAll(m => m.Name.Contains("Microsoft.AspNet."));
+            var mvc6final = "6.0.0-rc1-final";
+            var mvc6finalServer = "1.0.0-rc1-final";
+
+            var dic = new Dictionary<string, string>()
             {
-                // not in dependencies list, so lets add it
-                ((List<ProjectReference>)model.ProjectReferences).Add(new ProjectReference()
-                {
-                    HintPath = "packages",
-                    Source = "Controller",
-                    Name = "Microsoft.AspNet.Mvc"
-                });
+                {"Microsoft.AspNet.Mvc", mvc6final},
+                {"Microsoft.AspNet.Mvc.TagHelpers", mvc6final},
+                {"Microsoft.AspNet.IISPlatformHandler", mvc6finalServer},
+                {"Microsoft.AspNet.Server.Kestrel", mvc6finalServer},
+                {"Microsoft.AspNet.StaticFiles", mvc6finalServer},
+                {"Microsoft.AspNet.Tooling.Razor", mvc6finalServer}
+            };
 
-                var destProjectJsonTxt = model.ToProjectJsonObj().ToString();
-                File.WriteAllText(destProjectJson, destProjectJsonTxt);
-            }
+            refList.AddRange(dic.Select(x => new ProjectReference()
+            {
+                Name = x.Key,
+                Version = x.Value,
+                HintPath = "packages"
+            }));
+
+            // not in dependencies list, so lets add it
+            model.ProjectReferences = refList;
+            var destProjectObj = model.ToProjectJsonObj();
+            destProjectObj.Commands = new Dictionary<string, string>() {{"web", "Microsoft.AspNet.Server.Kestrel"}};
+            var destProjectJsonTxt = destProjectObj.ToString();
+            File.WriteAllText(destProjectJson, destProjectJsonTxt);
         }
 
 
