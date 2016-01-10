@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using DnxMigrater.Other;
 
@@ -14,12 +15,13 @@ namespace DnxMigrater.Migraters
             return file.EndsWith(".cshtml");
         }
 
-        public void ProcessFile(string file, string dest)
+        public IDictionary<string,string> ProcessFile(string file, string dest)
         {
             _log.Trace("\tprocessing razor view {0} --> {1}", file, dest);
             var csTxt = UpdateRazorView(file);
             File.WriteAllText(dest, csTxt);
             _log.Trace("\trazor updated {0} --> {1}", file, dest);
+            return null;
         }
 
         private string UpdateRazorView(string file )

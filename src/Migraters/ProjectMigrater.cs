@@ -25,6 +25,8 @@ namespace DnxMigrater.Migraters
         private readonly ICsProjectFileReader _projectFileReader;
         private readonly IMvcProjectFileMigrater _mvcProjectFileMigrater;
 
+        private readonly IFileCopyProcessor _genericCopyProcessor;
+
         private XProjWriter _xProjWriter;
         private readonly ProjectTypeGuidMapper _guidMapper;
         #endregion
@@ -42,6 +44,7 @@ namespace DnxMigrater.Migraters
             _xProjWriter = new XProjWriter(_templateRenderer);
             _guidMapper = new ProjectTypeGuidMapper(_log);
             _mvcProjectFileMigrater = new MvcProjectFileMigrater(_log);
+            _genericCopyProcessor = new GenericFileProcessor(_log);
         }
         #endregion
 
@@ -161,6 +164,8 @@ namespace DnxMigrater.Migraters
                 return;
             } 
 
+            var newProjectDependenciesToAdd =new Dictionary<string,string>();
+
             foreach (var file in files)
             {
                 var relativeFile = file;
@@ -190,13 +195,44 @@ namespace DnxMigrater.Migraters
                 if (!Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
 
-                File.Copy(src, dest, true);
-                _log.Trace("copy {0} --> {1}", src, dest);
+
+                if (_genericCopyProcessor.CanProcessFile(src))
+                {
+                    var newProjectDepenencies= _genericCopyProcessor.ProcessFile(src, dest);
+                    if (newProjectDepenencies!=null)
+                        foreach (var newProjectDepenency in newProjectDepenencies)
+                        {
+                            if (!newProjectDependenciesToAdd.ContainsKey(newProjectDepenency.Key))
+                                newProjectDependenciesToAdd.Add(newProjectDepenency.Key,newProjectDepenency.Value);
+                        }
+                }
+                else
+                {
+                    File.Copy(src, dest, true);
+                    _log.Trace("copy {0} --> {1}", src, dest);
+                }
+            }
+
+            if (newProjectDependenciesToAdd.Any())
+            {
+                UpdateProjectDependencies(model,newProjectDependenciesToAdd,destProjectJson);
+                newProjectDependenciesToAdd = new Dictionary<string, string>();
             }
         }
 
-   
-
+        private void UpdateProjectDependencies(ProjectCsProjObj model, IDictionary<string, string> dependencies, string destProjJsonFile)
+        {
+            var refList = model.ProjectReferences.ToList();
+            refList.AddRange(dependencies.Select(x => new ProjectReference()
+            {
+                Name = x.Key,
+                Version = x.Value,
+                HintPath = "packages"
+            }));
+            model.ProjectReferences = refList;
+            var destProjectObj = model.ToProjectJsonObj();
+            File.WriteAllText(destProjJsonFile, destProjectObj.ToString());
+        }
 
         private string GetProjectFilePath(string projectPath)
         {

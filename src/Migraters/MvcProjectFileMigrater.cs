@@ -11,17 +11,25 @@ namespace DnxMigrater.Migraters
     {
         private readonly ILogger _log;
         private readonly IEnumerable<IFileCopyProcessor> _copyProcessors;
+        private IFileCopyProcessor _genericProcessor;
 
 
         public MvcProjectFileMigrater(ILogger logger)
         {
             _log = logger;
             _copyProcessors = new IFileCopyProcessor[] { new MvcFileControllerProcessor(_log), new MvcFileRazorViewProcessor(_log) };
+            _genericProcessor = new GenericFileProcessor(_log);
         }
 
         public void CopyMvcFiles(ProjectCsProjObj model, string baseSrcPath, string destProjectJson, IEnumerable<string> filesToCopy, string destCopyPath)
         {
             var files = filesToCopy.ToList();
+
+            // write helpers
+            var extFile = Path.Combine(destCopyPath, "MVC6HttpRequestExtensions.cs");
+            var csFileTmp = File.ReadAllText("MVC6RequestExtensions.cs.template.txt");
+            File.WriteAllText(extFile,csFileTmp);
+
 
             // remove help page (api specific)
             files.RemoveAll(m => m.Contains("Areas\\Help"));
@@ -52,9 +60,14 @@ namespace DnxMigrater.Migraters
                 }
                 else
                 {
-                    // standard copy
-                    File.Copy(src, dest, true);
-                    _log.Trace("\t\tcopied {0} --> {1}", src, dest);
+                    if (_genericProcessor.CanProcessFile(src))
+                        _genericProcessor.ProcessFile(src, dest);
+                    else
+                    {
+                        // standard copy
+                        File.Copy(src, dest, true);
+                        _log.Trace("\t\tcopied {0} --> {1}", file, dest);
+                    }
                 }
             }
 
@@ -128,6 +141,17 @@ namespace DnxMigrater.Migraters
                 // web asset
                 relativeFile = relativeFile.Replace("fonts\\", "wwwroot\\fonts\\");
             }
+
+
+            if (relativeFile.Contains("BundleConfig.cs"))
+            {
+                relativeFile = relativeFile.Replace("BundleConfig.cs", "BundleConfig.cs.orig");
+            }
+            if (relativeFile.Contains("FilterConfig.cs"))
+            {
+                relativeFile = relativeFile.Replace("FilterConfig.cs", "FilterConfig.cs.orig");
+            }
+
 
 
             if (relativeFile.EndsWith(".config"))
