@@ -37,7 +37,7 @@ namespace DnxMigrater.Migraters
             var usings = new List<string>();
             csCode = UpdateUsings(csCode);
             usings = GetUsings(csCode).ToList();
-            if (csCode.Contains("MvcHtmlString") || csCode.Contains("this HtmlHelper"))
+            if (csCode.Contains("MvcHtmlString") || csCode.Contains("this HtmlHelper") || csCode.Contains("IHtmlHelper"))
             {
                 usings.Add("Microsoft.AspNet.Mvc.Rendering");
                 usings.Add("Microsoft.AspNet.Mvc.ViewFeatures");
@@ -107,7 +107,15 @@ namespace DnxMigrater.Migraters
                 _replacementsDictionary.Add("return htmlHelper.", "return (HtmlString)htmlHelper.");
                 _replacementsDictionary.Add("HtmlHelper<", "IHtmlHelper<");
                 _replacementsDictionary.Add("this HtmlHelper", "this IHtmlHelper");
-                
+                _replacementsDictionary.Add("(HtmlHelper ", "(IHtmlHelper ");
+                _replacementsDictionary.Add(" HtmlHelper ", " IHtmlHelper ");
+
+
+                _replacementsDictionary.Add("HttpUtility.HtmlEncode(", "System.Net.WebUtility.HtmlEncode(");
+                _replacementsDictionary.Add("HttpUtility.HtmlDecode(", "System.Net.WebUtility.HtmlDecode(");
+                _replacementsDictionary.Add("HttpUtility.UrlEncode(", "System.Net.WebUtility.UrlEncode(");
+                _replacementsDictionary.Add("HttpUtility.UrlDecode(", "System.Net.WebUtility.UrlDecode(");
+
 
                 _replacementsDictionary.Add("System.Web.Http.ModelBinding.ModelStateDictionary","ModelStateDictionary");
                 _replacementsDictionary.Add("System.Web.Mvc.ModelStateDictionary", "ModelStateDictionary");
