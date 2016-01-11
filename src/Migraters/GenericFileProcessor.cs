@@ -48,7 +48,8 @@ namespace DnxMigrater.Migraters
             }
             if (usings.Any())
             {
-                csCode = string.Join("\r\n", usings.Distinct().Select(x=>"using "+x+";")) + "\r\n" + csCode;
+                var newUsings = usings.Where(x => !csCode.Contains("using " + x + ";"));
+                csCode = string.Join("\r\n", newUsings.Distinct().Select(x=>"using "+x+";")) + "\r\n" + csCode;
             }
 
             return csCode;
@@ -80,31 +81,41 @@ namespace DnxMigrater.Migraters
             return usings;
         } 
 
+
+        Dictionary<string,string> _replacementsDictionary; 
+
         private string UpdateUsings(string csTxt)
         {
             // mvc controller file -- process in memory and save directly to path
             // see: http://aspnetmvc.readthedocs.org/projects/mvc/en/latest/migration/migratingfromwebapi2.html
             // using replacements
-            
+            if (_replacementsDictionary == null)
+            {
+                _replacementsDictionary = new Dictionary<string, string>();
+                _replacementsDictionary.Add("using System.Web;","// removed using System.Web");
+                _replacementsDictionary.Add("using System.Web.Http;", "// dnxMigrater REMOVED - using System.Web.Http");
+                _replacementsDictionary.Add("using System.Web.Html;", "// dnxMigrater REMOVED - using System.Web.Html");
+                _replacementsDictionary.Add("using System.Web.Http.ModelBinding;", "using Microsoft.AspNet.Mvc.ModelBinding;");
 
-            if (csTxt.Contains("using System.Web;"))
-                csTxt = csTxt.Replace("using System.Web;", "// removed using System.Web;");
+                // mvc to aspnet.mvc
+                _replacementsDictionary.Add("using System.Web.Mvc", "using Microsoft.AspNet.Mvc");
+                _replacementsDictionary.Add("using System.Web.Routing", "using Microsoft.AspNet.Routing");
 
-            if (csTxt.Contains("using System.Web.Mvc"))
-                csTxt = csTxt.Replace("using System.Web.Mvc", "using Microsoft.AspNet.Mvc");
-            if (csTxt.Contains("using System.Web.Http"))
-                csTxt = csTxt.Replace("using System.Web.Http", "// dnxMigrater REMOVED - using System.Web.Http");
-            // using additions
+                _replacementsDictionary.Add("using Microsoft.AspNet.Mvc.Html;", "// dnxMigrater REMOVED - Microsoft.AspNet.Mvc.Html;");
 
-            if (csTxt.Contains("using Microsoft.AspNet.Mvc.Html;"))
-                csTxt = csTxt.Replace("using Microsoft.AspNet.Mvc.Html;", "");
+                // html helpers
+                _replacementsDictionary.Add("return htmlHelper.", "return (HtmlString)htmlHelper.");
+                _replacementsDictionary.Add("HtmlHelper<", "IHtmlHelper<");
 
-            if (csTxt.Contains("return htmlHelper."))
-                csTxt = csTxt.Replace("return htmlHelper.", "return (HtmlString)htmlHelper.");
+                _replacementsDictionary.Add("System.Web.Http.ModelBinding.ModelStateDictionary","ModelStateDictionary");
+                _replacementsDictionary.Add("System.Web.Mvc.ModelStateDictionary", "ModelStateDictionary");
+            }
 
-
-            csTxt = csTxt.Replace("HtmlHelper<", "IHtmlHelper<");
-
+            foreach (var item in _replacementsDictionary)
+            {
+                if (csTxt.Contains(item.Key))
+                    csTxt = csTxt.Replace(item.Key, item.Value);
+            }
 
             return csTxt;
         }
