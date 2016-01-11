@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using DnxMigrater.Other;
-using NLog.LogReceiverService;
 
 namespace DnxMigrater.Migraters
 {
@@ -69,11 +68,14 @@ namespace DnxMigrater.Migraters
                 usings.Add("DnxMigrater.MVC6");
             if (csTxt.Contains("new SelectListItem"))
                 usings.Add("Microsoft.AspNet.Mvc.Rendering");
-            if (csTxt.Contains("ModelStateDictionary"))
-                usings.Add("Microsoft.AspNet.Mvc.ModelBinding");
             if (csTxt.Contains(" HtmlHelper "))
                 usings.Add("Microsoft.AspNet.Mvc.ViewFeatures");
-
+            if (csTxt.Contains("(ApiDescription "))
+                usings.Add("Microsoft.AspNet.Mvc.ApiExplorer");
+            if (csTxt.Contains(" ModelStateDictionary") 
+                || csTxt.Contains("(ModelMetadata") 
+                || csTxt.Contains(" ModelMetadata "))
+                    usings.Add("Microsoft.AspNet.Mvc.ModelBinding");
 
             return usings;
         } 
@@ -83,6 +85,8 @@ namespace DnxMigrater.Migraters
             // mvc controller file -- process in memory and save directly to path
             // see: http://aspnetmvc.readthedocs.org/projects/mvc/en/latest/migration/migratingfromwebapi2.html
             // using replacements
+            
+
             if (csTxt.Contains("using System.Web;"))
                 csTxt = csTxt.Replace("using System.Web;", "// removed using System.Web;");
 
@@ -91,6 +95,16 @@ namespace DnxMigrater.Migraters
             if (csTxt.Contains("using System.Web.Http"))
                 csTxt = csTxt.Replace("using System.Web.Http", "// dnxMigrater REMOVED - using System.Web.Http");
             // using additions
+
+            if (csTxt.Contains("using Microsoft.AspNet.Mvc.Html;"))
+                csTxt = csTxt.Replace("using Microsoft.AspNet.Mvc.Html;", "");
+
+            if (csTxt.Contains("return htmlHelper."))
+                csTxt = csTxt.Replace("return htmlHelper.", "return (HtmlString)htmlHelper.");
+
+
+            csTxt = csTxt.Replace("HtmlHelper<", "IHtmlHelper<");
+
 
             return csTxt;
         }
