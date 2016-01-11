@@ -106,6 +106,8 @@ namespace DnxMigrater.Migraters
                 // html helpers
                 _replacementsDictionary.Add("return htmlHelper.", "return (HtmlString)htmlHelper.");
                 _replacementsDictionary.Add("HtmlHelper<", "IHtmlHelper<");
+                _replacementsDictionary.Add("this HtmlHelper", "this IHtmlHelper");
+                
 
                 _replacementsDictionary.Add("System.Web.Http.ModelBinding.ModelStateDictionary","ModelStateDictionary");
                 _replacementsDictionary.Add("System.Web.Mvc.ModelStateDictionary", "ModelStateDictionary");

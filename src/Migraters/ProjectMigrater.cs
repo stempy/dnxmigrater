@@ -223,6 +223,13 @@ namespace DnxMigrater.Migraters
         private void UpdateProjectDependencies(ProjectCsProjObj model, IDictionary<string, string> dependencies, string destProjJsonFile)
         {
             var refList = model.ProjectReferences.ToList();
+
+            _log.Warn("Removing System.Web dependencies...");
+
+            // Remove System.Web Dependencies
+            refList.RemoveAll(x => x.Name.StartsWith("System.Web"));
+
+
             refList.AddRange(dependencies.Select(x => new ProjectReference()
             {
                 Name = x.Key,
