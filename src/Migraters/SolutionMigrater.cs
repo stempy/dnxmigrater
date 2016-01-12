@@ -34,7 +34,7 @@ namespace DnxMigrater.Migraters
         }
         #endregion
 
-        public void MigrateSolution(string solutionFile, bool copyAllFiles = false, string destDir = null)
+        public void MigrateSolution(string solutionFile, bool copyAllFiles, string[] upgradeProjects, string destDir = null)
         {
             if (!File.Exists(solutionFile))
             {
@@ -54,8 +54,6 @@ namespace DnxMigrater.Migraters
             _log.Info("Migrating solution file {0}",solutionFile);
 
 
-
-
             var newSrcDir = Path.Combine(tmpDir, "src");
             _log.Debug("Debug Dir {0}", tmpDir);
             _log.Debug("Analyzing Projects in solution...");
@@ -67,8 +65,10 @@ namespace DnxMigrater.Migraters
             foreach (var projectCsProjObj in projectItems)
             {
                 var destProjDir = Path.Combine(newSrcDir, projectCsProjObj.ProjectName);
-                _log.Debug("Migrating Project {0} to {1}",projectCsProjObj.ProjectName,destProjDir);
-                var updatedProj = _projectMigrater.MigrateProject(projectCsProjObj,copyAllFiles, destProjDir);
+                bool upgradeThisProj = upgradeProjects.Any(x => x == projectCsProjObj.ProjectName);
+                _log.Debug("Migrating Project {2} {0} to {1}",projectCsProjObj.ProjectName,destProjDir,upgradeThisProj?"[DNXUPGRADE]":"");
+                
+                var updatedProj = _projectMigrater.MigrateProject(projectCsProjObj,copyAllFiles, upgradeThisProj, destProjDir);
 
                 // fix up relative path
                 var newPathDir = Path.GetDirectoryName(updatedProj.ProjectFileRelativePath);

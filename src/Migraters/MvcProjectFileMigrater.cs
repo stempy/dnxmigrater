@@ -18,7 +18,7 @@ namespace DnxMigrater.Migraters
         {
             _log = logger;
             _copyProcessors = new IFileCopyProcessor[] { new MvcFileControllerProcessor(_log), new MvcFileRazorViewProcessor(_log) };
-            _genericProcessor = new GenericFileProcessor(_log);
+            _genericProcessor = new Mvc6FileUpgrader(_log);
         }
 
         public void CopyMvcFiles(ProjectCsProjObj model, string baseSrcPath, string destProjectJson, IEnumerable<string> filesToCopy, string destCopyPath)

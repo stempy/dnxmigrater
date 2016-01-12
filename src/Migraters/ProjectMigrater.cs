@@ -25,7 +25,7 @@ namespace DnxMigrater.Migraters
         private readonly ICsProjectFileReader _projectFileReader;
         private readonly IMvcProjectFileMigrater _mvcProjectFileMigrater;
 
-        private readonly IFileCopyProcessor _genericCopyProcessor;
+        private readonly IFileCopyProcessor _mvc6FileUpgrader;
 
         private XProjWriter _xProjWriter;
         private readonly ProjectTypeGuidMapper _guidMapper;
@@ -44,16 +44,16 @@ namespace DnxMigrater.Migraters
             _xProjWriter = new XProjWriter(_templateRenderer);
             _guidMapper = new ProjectTypeGuidMapper(_log);
             _mvcProjectFileMigrater = new MvcProjectFileMigrater(_log);
-            _genericCopyProcessor = new GenericFileProcessor(_log);
+            _mvc6FileUpgrader = new Mvc6FileUpgrader(_log);
         }
         #endregion
 
         #region [Migrate Interface]
         public ProjectCsProjObj MigrateProject(string projectFile, bool includeFiles, string destDir = null)
         {
-            return MigrateProject(new ProjectCsProjObj() {ProjectFilePath = projectFile},includeFiles,destDir);
+            return MigrateProject(new ProjectCsProjObj() {ProjectFilePath = projectFile},includeFiles,true, destDir);
         }
-      
+
         /// <summary>
         /// Migrate .NET project (4.6 or less)
         /// .csproj
@@ -66,10 +66,12 @@ namespace DnxMigrater.Migraters
         /// [project].xproj
         /// appsettings.json
         /// </summary>
-        /// <param name="projectFile"></param>
+        /// <param name="model"></param>
         /// <param name="includeFiles">Include all included files from csproj file</param>
+        /// <param name="upgradeProjectFilesToMvc6"></param>
         /// <param name="destDir"></param>
-        public ProjectCsProjObj MigrateProject(ProjectCsProjObj model, bool includeFiles = false, string destDir = null)
+        /// <param name="projectFile"></param>
+        public ProjectCsProjObj MigrateProject(ProjectCsProjObj model, bool includeFiles = false, bool upgradeProjectFilesToMvc6 = false, string destDir = null)
         {
             var projectFile = GetProjectFilePath(model.ProjectFilePath);
             var projectFileNameWithoutExt = Path.GetFileNameWithoutExtension(model.ProjectFilePath);
@@ -120,7 +122,7 @@ namespace DnxMigrater.Migraters
             // copy ALL csproj included files to destination
             if (includeFiles)
             {
-                CopyIncludedProjectFiles(model, destDir, projectDir, destprojectJsonFile);
+                CopyIncludedProjectFiles(model, destDir, projectDir, destprojectJsonFile, upgradeProjectFilesToMvc6);
             }
 
             _log.Info(" --- Project: {0} Completed to \"{1}\" ---", projectFileNameWithoutExt, destDir);
@@ -136,7 +138,8 @@ namespace DnxMigrater.Migraters
         /// <param name="destDir"></param>
         /// <param name="projectSrcDir"></param>
         /// <param name="destProjectJson"></param>
-        private void CopyIncludedProjectFiles(ProjectCsProjObj model, string destDir, string projectSrcDir, string destProjectJson)
+        /// <param name="upgradeProjectFiles"></param>
+        private void CopyIncludedProjectFiles(ProjectCsProjObj model, string destDir, string projectSrcDir, string destProjectJson, bool upgradeProjectFiles)
         {
             _log.Debug("Copying all included files from " + projectSrcDir);
 
@@ -196,9 +199,9 @@ namespace DnxMigrater.Migraters
                     Directory.CreateDirectory(dir);
 
 
-                if (_genericCopyProcessor.CanProcessFile(src))
+                if (upgradeProjectFiles && _mvc6FileUpgrader.CanProcessFile(src))
                 {
-                    var newProjectDepenencies= _genericCopyProcessor.ProcessFile(src, dest);
+                    var newProjectDepenencies= _mvc6FileUpgrader.ProcessFile(src, dest);
                     if (newProjectDepenencies!=null)
                         foreach (var newProjectDepenency in newProjectDepenencies)
                         {

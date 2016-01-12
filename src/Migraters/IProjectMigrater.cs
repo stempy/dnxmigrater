@@ -20,6 +20,6 @@ namespace DnxMigrater.Migraters
         /// <param name="includeFiles"></param>
         /// <param name="destDir"></param>
         ProjectCsProjObj MigrateProject(string projectFile, bool includeFiles, string destDir = null);
-        ProjectCsProjObj MigrateProject(ProjectCsProjObj model, bool includeFiles,string destDir = null);
+        ProjectCsProjObj MigrateProject(ProjectCsProjObj model, bool includeFiles, bool upgradeProjectFilesToMvc6, string destDir = null);
     }
 }

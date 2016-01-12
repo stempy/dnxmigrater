@@ -5,9 +5,9 @@ using DnxMigrater.Other;
 
 namespace DnxMigrater.Migraters
 {
-    public class GenericFileProcessor : FileProcessorBase, IFileCopyProcessor
+    public class Mvc6FileUpgrader : FileProcessorBase, IFileCopyProcessor
     {
-        public GenericFileProcessor(ILogger logger) : base(logger)
+        public Mvc6FileUpgrader(ILogger logger) : base(logger)
         {
         }
 
@@ -25,7 +25,7 @@ namespace DnxMigrater.Migraters
             _dependenciesToAdd = new Dictionary<string, string>();
             var cleanedCsharp = CleanupCsharpFile(csharp);
             File.WriteAllText(dest, cleanedCsharp);
-            _log.Trace("\t\tprocessed {0} --> {1}", file, dest);
+            _log.Trace("\t\tdnxupgraded file {0} --> {1}", file, dest);
             return _dependenciesToAdd;
         }
 

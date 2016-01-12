@@ -2,6 +2,6 @@
 {
     public interface ISolutionMigrater
     {
-        void MigrateSolution(string solutionFile, bool copyAllFiles = false, string destDir = null);
+        void MigrateSolution(string solutionFile, bool copyAllFiles, string[] upgradeProjects, string destDir = null);
     }
 }

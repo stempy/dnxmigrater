@@ -62,7 +62,7 @@
     </Content>
     <Compile Include="Mapping\ProjectTypeGuidMapper.cs" />
     <Compile Include="Mapping\ProjectTypesMapper.cs" />
-    <Compile Include="Migraters\GenericFileProcessor.cs" />
+    <Compile Include="Migraters\Mvc6FileUpgrader.cs" />
     <Compile Include="Migraters\MvcFileControllerProcessor.cs" />
     <Compile Include="Migraters\FileProcessorBase.cs" />
     <Compile Include="Migraters\MvcFileRazorViewProcessor.cs" />
